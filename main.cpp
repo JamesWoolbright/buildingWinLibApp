@@ -1,5 +1,4 @@
 #include <Windows.h>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -67,8 +66,23 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
                 }
             }
             } break;
+        case WM_CLOSE: {
+            DestroyWindow(g_hCheckBox);
+            DestroyWindow(g_hListBox);
+            DestroyWindow(g_hTextBox);
 
+            DestroyWindow(Window);
+
+            PostQuitMessage(0);
+
+        } break;
         case WM_DESTROY: {
+            DestroyWindow(g_hCheckBox);
+            DestroyWindow(g_hListBox);
+            DestroyWindow(g_hTextBox);
+
+            DestroyWindow(Window);
+
             PostQuitMessage(0);
             
             } break;
