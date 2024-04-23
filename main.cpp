@@ -5,7 +5,8 @@
 //Global variables
 HWND g_hListBox;
 HWND g_hTextBox;
-HWND g_hCheckBox;
+HWND g_hCompleteBox;
+
 // TODO:: Check what the syntax and all lat for this
 std::vector<std::pair<std::string, bool>> g_tasks;
 
@@ -18,7 +19,6 @@ void AddTask(const std::string& task) {
 // Specifies the index of the task then at that element it sets the second pair to the opposite of it's current
 void ToggleCompletion(int index) {
     g_tasks[index].second = !g_tasks[index].second;
-
 }
 
 // Sends a delete message code to the window
@@ -37,10 +37,16 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
 
             g_hListBox = CreateWindowExW(0 ,L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | LBS_STANDARD, 10, 50, 310, 200, Window, NULL, NULL, NULL);
 
-            g_hCheckBox = CreateWindowExW(0, L"BUTTON", L"Complete", WS_CHILD | WS_VISIBLE | BS_CHECKBOX, 380, 10, 100, 25, Window, (HMENU)2 , NULL, NULL);
+            g_hCompleteBox = CreateWindowExW(0, L"BUTTON", L"Complete", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 340, 30, 100, 25, Window, (HMENU)2 , NULL, NULL);
 
+            CreateWindowExW(0, L"BUTTON", L"Remove", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 340, 65, 100, 25, Window, (HMENU)3 , NULL, NULL);
+
+            CreateWindowExW(0, L"BUTTON", L"Clear", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 340, 100, 100, 25, Window, (HMENU)4 , NULL, NULL);
+
+            CreateWindowExW(0, L"BUTTON", L"Save", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 340, 135, 100, 25, Window, (HMENU)5 , NULL, NULL);
+
+            CreateWindowExW(0, L"BUTTON", L"Load", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 340, 170, 100, 25, Window, (HMENU)6 , NULL, NULL);
             
-
         } break;
         case WM_COMMAND: {
             if (LOWORD(wParameter) == 1) { // Add Task Button Clicked
@@ -51,23 +57,22 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
                     AddTask(task);
                     SetWindowTextA(g_hTextBox, "");
                 }
-            } else if (LOWORD(wParameter) == 2) { // Check Box Clicked
+            } else if (LOWORD(wParameter) == 2) { // Complete Box Clicked
                 int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
                 if (index != LB_ERR) {
                     ToggleCompletion(index);
-
-                    SendMessageA(g_hCheckBox, BM_SETCHECK, g_tasks[index].second ? BST_CHECKED : BST_UNCHECKED, 0);
+                    if (g_tasks[index].second && g_tasks[index].first.find("[x]") == std::string::npos) {
+                    g_tasks[index].first += " [x]";
+                    char crtmsg[256];
+                    SendMessageA(g_hListBox, LB_GETTEXT, index, reinterpret_cast<LPARAM>(crtmsg));
+                    strcat(crtmsg, " [x]");
+                    SendMessageA(g_hListBox, LB_DELETESTRING, index, 0);
+                    SendMessageA(g_hListBox, LB_INSERTSTRING, index, reinterpret_cast<LPARAM>(crtmsg)); }
                 } 
-            }   else if (HIWORD(wParameter) == LBN_SELCHANGE) {
-                int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
-                if (index != LB_ERR) {
-                    SendMessageA(g_hCheckBox, BM_SETCHECK, g_tasks[index].second ? BST_CHECKED : BST_UNCHECKED, 0);
-                    
-                }
             }
             } break;
         case WM_CLOSE: {
-            DestroyWindow(g_hCheckBox);
+            DestroyWindow(g_hCompleteBox);
             DestroyWindow(g_hListBox);
             DestroyWindow(g_hTextBox);
 
@@ -77,7 +82,7 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
 
         } break;
         case WM_DESTROY: {
-            DestroyWindow(g_hCheckBox);
+            DestroyWindow(g_hCompleteBox);
             DestroyWindow(g_hListBox);
             DestroyWindow(g_hTextBox);
 
