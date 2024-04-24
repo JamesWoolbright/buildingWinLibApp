@@ -57,7 +57,9 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
                     AddTask(task);
                     SetWindowTextA(g_hTextBox, "");
                 }
-            } else if (LOWORD(wParameter) == 2) { // Complete Box Clicked
+            } 
+            
+            if (LOWORD(wParameter) == 2) { // Complete Box Clicked
                 int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
                 if (index != LB_ERR) {
                     ToggleCompletion(index);
@@ -70,7 +72,27 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
                     SendMessageA(g_hListBox, LB_INSERTSTRING, index, reinterpret_cast<LPARAM>(crtmsg)); }
                 } 
             }
-            } break;
+
+            if (LOWORD(wParameter) == 3) {
+                int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
+                if (index != LB_ERR) {
+                    RemoveTask(index);
+                }
+            } 
+
+            if (LOWORD(wParameter) == 4) {
+                SendMessageA(g_hListBox, LB_RESETCONTENT, 0, 0);
+                g_tasks.clear();
+            }
+
+            if (LOWORD(wParameter) == 5) {
+                SendMessageA(g_hListBox, LB_ADDSTRING, 0, (LPARAM)"Save Message Sent");
+            }
+
+            if (LOWORD(wParameter) == 6) {
+                SendMessageA(g_hListBox, LB_ADDSTRING, 0, (LPARAM)"Load Message Sent");
+            } 
+        }   break;
         case WM_CLOSE: {
             DestroyWindow(g_hCompleteBox);
             DestroyWindow(g_hListBox);
