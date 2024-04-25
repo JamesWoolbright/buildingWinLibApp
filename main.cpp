@@ -1,31 +1,52 @@
 #include <Windows.h>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <iostream>
+#include <filesystem>
 
 //Global variables
 HWND g_hListBox;
 HWND g_hTextBox;
 HWND g_hCompleteBox;
 
-// TODO:: Check what the syntax and all lat for this
-std::vector<std::pair<std::string, bool>> g_tasks;
-
-
+enum FileOperationMode {
+    Save,
+    Load,
+};
 
 void AddTask(const std::string& task) {
     SendMessageA(g_hListBox, LB_ADDSTRING, 0, (LPARAM)task.c_str());
-    g_tasks.push_back(std::make_pair(task, false));
-}
-// Specifies the index of the task then at that element it sets the second pair to the opposite of it's current
-void ToggleCompletion(int index) {
-    g_tasks[index].second = !g_tasks[index].second;
 }
 
+void FileOperations(FileOperationMode mode) {
+    std::fstream outputFile("data.txt", std::ios::in | std::ios::out);
+    
+    if (mode == Save) {
+        outputFile.close(); outputFile.open("data.txt", std::ios::in | std::ios::out | std::ios::trunc);
+    }
+
+    if (outputFile.is_open() && mode == Save) {
+        int ListCount = SendMessageA(g_hListBox, LB_GETCOUNT, 0, 0);
+        for (int i = 0; i < ListCount; i++) {
+            std::string CurrentMessage;
+            CurrentMessage.resize(256);
+            SendMessageA(g_hListBox, LB_GETTEXT, i, (LPARAM)CurrentMessage.data());
+            outputFile << CurrentMessage << "\n";
+        }
+        outputFile.close();
+    }
+
+    if (outputFile.is_open() && mode == Load) {
+        std::string line;
+        while(std::getline(outputFile, line)) {
+            AddTask(line);
+        }
+    }
+}
 // Sends a delete message code to the window
 void RemoveTask(int index) {
     SendMessageA(g_hListBox, LB_DELETESTRING, index, 0);
-    //gets the beginning of the list/array then adds the index TODO:: Check why
-    g_tasks.erase(g_tasks.begin() + index);
 }
 
 LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM lParameter) {
@@ -50,8 +71,9 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
         } break;
         case WM_COMMAND: {
             if (LOWORD(wParameter) == 1) { // Add Task Button Clicked
-                char buffer[256];
-                GetWindowTextA(g_hTextBox, buffer, sizeof(buffer));
+                std::string buffer;
+                buffer.resize(256);
+                GetWindowTextA(g_hTextBox, buffer.data(), sizeof(buffer));
                 std::string task(buffer);
                 if (!task.empty()) {
                     AddTask(task);
@@ -62,16 +84,24 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
             if (LOWORD(wParameter) == 2) { // Complete Box Clicked
                 int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
                 if (index != LB_ERR) {
-                    ToggleCompletion(index);
-                    if (g_tasks[index].second && g_tasks[index].first.find("[x]") == std::string::npos) {
-                    g_tasks[index].first += " [x]";
-                    char crtmsg[256];
-                    SendMessageA(g_hListBox, LB_GETTEXT, index, reinterpret_cast<LPARAM>(crtmsg));
-                    strcat(crtmsg, " [x]");
-                    SendMessageA(g_hListBox, LB_DELETESTRING, index, 0);
-                    SendMessageA(g_hListBox, LB_INSERTSTRING, index, reinterpret_cast<LPARAM>(crtmsg)); }
-                } 
+                    char Message[256];
+                    SendMessageA(g_hListBox, LB_GETTEXT, 0, (LPARAM)Message);
+
+                    if (strstr(Message, "[Complete]") == NULL) {
+                        strcat(Message, " [Complete]");
+                        SendMessageA(g_hListBox, LB_DELETESTRING, index, 0);
+                        SendMessageA(g_hListBox, LB_INSERTSTRING, index, (LPARAM)Message);
+                    } else {
+                        char* position = strstr(Message, " [Complete]");
+                        if (position != NULL) {
+                            *position = '\0';
+                            SendMessageA(g_hListBox, LB_DELETESTRING, index, 0);
+                            SendMessageA(g_hListBox, LB_INSERTSTRING, index, (LPARAM)Message);
+                        }
+                    }
+                }
             }
+
 
             if (LOWORD(wParameter) == 3) {
                 int index = SendMessageA(g_hListBox, LB_GETCURSEL, 0, 0);
@@ -82,17 +112,18 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT Message, WPARAM wParameter, LPARAM
 
             if (LOWORD(wParameter) == 4) {
                 SendMessageA(g_hListBox, LB_RESETCONTENT, 0, 0);
-                g_tasks.clear();
             }
 
             if (LOWORD(wParameter) == 5) {
-                SendMessageA(g_hListBox, LB_ADDSTRING, 0, (LPARAM)"Save Message Sent");
+                FileOperations(Save);          
             }
 
             if (LOWORD(wParameter) == 6) {
-                SendMessageA(g_hListBox, LB_ADDSTRING, 0, (LPARAM)"Load Message Sent");
+                FileOperations(Load);
             } 
-        }   break;
+        } break;
+
+
         case WM_CLOSE: {
             DestroyWindow(g_hCompleteBox);
             DestroyWindow(g_hListBox);
@@ -132,7 +163,7 @@ int WINAPI WinMain(
 
     RegisterClassA(&wc);
 
-    HWND hWindow = CreateWindowExA(0, CLASS_NAME, "Basic Task Checker", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 600, 300, NULL, NULL, hInstance, NULL);
+    HWND hWindow = CreateWindowExA(0, CLASS_NAME, "Basic Task Checker", WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, 600, 300, NULL, NULL, hInstance, NULL);
     
     if (hWindow == NULL) {return 0;}
     
